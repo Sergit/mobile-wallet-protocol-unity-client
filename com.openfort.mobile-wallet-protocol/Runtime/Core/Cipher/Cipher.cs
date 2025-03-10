@@ -1,3 +1,6 @@
+#if !UNITY_WEBGL || UNITY_EDITOR
+#define ENABLE_COMPRESSION
+#endif
 using System;
 using System.IO;
 using System.IO.Compression;
@@ -99,11 +102,13 @@ namespace MobileWalletProtocol
             var parameters = new AeadParameters(new KeyParameter(sharedSecret.Key), 128, iv);
             engine.Init(true, parameters);
 
-            var plainTextBytes = Encoding.UTF8.GetBytes(plainText);
-            var compressedBytes = Compress(plainTextBytes);
-            var cipherText = new byte[engine.GetOutputSize(compressedBytes.Length)];
+            var bytes = Encoding.UTF8.GetBytes(plainText);
+#if ENABLE_COMPRESSION
+            bytes = Compress(bytes);
+#endif
+            var cipherText = new byte[engine.GetOutputSize(bytes.Length)];
             
-            var len = engine.ProcessBytes(compressedBytes, 0, compressedBytes.Length, cipherText, 0);
+            var len = engine.ProcessBytes(bytes, 0, bytes.Length, cipherText, 0);
             engine.DoFinal(cipherText, len);
 
             return new EncryptedData
@@ -120,14 +125,14 @@ namespace MobileWalletProtocol
             
             engine.Init(false, parameters);
 
-            var compressedBytes = new byte[engine.GetOutputSize(encryptedData.CipherText.Length)];
-            var len = engine.ProcessBytes(encryptedData.CipherText, 0, encryptedData.CipherText.Length, compressedBytes, 0);
+            var bytes = new byte[engine.GetOutputSize(encryptedData.CipherText.Length)];
+            var len = engine.ProcessBytes(encryptedData.CipherText, 0, encryptedData.CipherText.Length, bytes, 0);
             
-            engine.DoFinal(compressedBytes, len);
-  
-            var plainTextBytes = Decompress(compressedBytes);
-
-            return Encoding.UTF8.GetString(plainTextBytes);
+            engine.DoFinal(bytes, len);
+#if ENABLE_COMPRESSION
+            bytes = Decompress(bytes);
+#endif
+            return Encoding.UTF8.GetString(bytes);
         }
 
         public static string ExportKeyToHexString(KeyType type, CryptoKey key)

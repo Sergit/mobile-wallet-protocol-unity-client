@@ -35,14 +35,11 @@ namespace MobileWalletProtocol
         {
             if (wallet.Type == WalletType.Web)
             {
-                var uriBuilder = new UriBuilder(wallet.Scheme)
-                {
-                    Port = -1,
-                };
+                var uriBuilder = new UriBuilder(wallet.Scheme);
 
                 uriBuilder.Query = EncodeRequestURLParams(request);
 
-                var result = await WebBrowser.OpenAuthSessionAsync(
+                var result = await WebBrowser.Instance.OpenPopupAsync(
                     uriBuilder.ToString(),
                     appCustomScheme);
 
@@ -75,7 +72,7 @@ namespace MobileWalletProtocol
         static string EncodeRequestURLParams(RPCRequestMessage request)
         {
             var query = HttpUtility.ParseQueryString(string.Empty);
-            
+
             AppendParam(query, "id", request.Id);
             AppendParam(query, "sender", request.Sender);
             AppendParam(query, "sdkVersion", request.SdkVersion);
@@ -95,7 +92,7 @@ namespace MobileWalletProtocol
                     IV = Convert.ToBase64String(encryptedData.IV),
                     CipherText = Convert.ToBase64String(encryptedData.CipherText)
                 };
-    
+
                 query.Add("content", @$"{{""encrypted"":{Utils.Serialize(encryptedDataRequest)}}}");
             }
 
@@ -133,7 +130,7 @@ namespace MobileWalletProtocol
         static T ParseParam<T>(NameValueCollection queryParams, string paramName)
         {
             var encodedValue = queryParams[paramName];
-            
+
             if (string.IsNullOrEmpty(encodedValue))
             {
                 throw new Exception($"Missing parameter: {paramName}");
